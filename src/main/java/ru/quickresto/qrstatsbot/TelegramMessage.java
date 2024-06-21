@@ -1,4 +1,4 @@
-package com.example.qrstatst;
+package ru.quickresto.qrstatsbot;
 
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
@@ -16,33 +16,24 @@ import java.util.List;
 
 public class TelegramMessage implements LongPollingSingleThreadUpdateConsumer {
     static String botToken = "6563408491:AAGRIvjmdIL_jqJ7QyEroCGeJQlJiFIo9eE";
-    TelegramClient telegramClient = new OkHttpTelegramClient(botToken);
-    StatService statService = new StatService();
+    private final TelegramClient telegramClient = new OkHttpTelegramClient(botToken);
+    private final StatService statService = new StatService();
     public void consume(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             String chatId = update.getMessage().getChatId().toString();
             String receivedText = update.getMessage().getText();
-            String messageText = statService.getAdditionalInfo();
 
-            SendMessage message = new SendMessage(chatId, messageText);
-            message.setChatId(chatId);
-            message.setText("Выберите действие:");
-            message.setReplyMarkup(createKeyboard());
-
-            if (receivedText.equals("/start")) {
-                try {
-                    telegramClient.execute(message);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
+            try {
+                SendMessage message = null;
+                if (receivedText.equals("/start")) {
+                    message = new SendMessage(chatId, "Выберите действие:");
+                    message.setReplyMarkup(createKeyboard());
+                } else if (receivedText.equals("Статистика")) {
+                    message = new SendMessage(chatId, statService.collectionStatistics());
                 }
-            } else if (receivedText.equals("Статистика")) {
-                String statistics = statService.getAdditionalInfo();
-                SendMessage statMessage = new SendMessage(chatId, statistics);
-                try {
-                    telegramClient.execute(statMessage);
-                } catch (TelegramApiException e) {
-                    e.printStackTrace();
-                }
+                telegramClient.execute(message);
+            } catch (TelegramApiException e) {
+                e.printStackTrace();
             }
         }
     }
