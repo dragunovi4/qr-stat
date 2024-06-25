@@ -1,16 +1,19 @@
 package ru.quickresto.qrstatsbot;
 
+import org.springframework.stereotype.Service;
+
 import java.sql.*;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
 
+@Service
 public class StatService {
     private int single, franch, daught, evotor, total = 0;
     private int daught2, single2, franch2, evotor2, total2 = 0;
     private String resultFr, resultDr, resultSin, resultEvo, resultTotal;
     private String intro = "Текущая статистика по облакам: ";
 
-    static String url = "jdbc:postgresql://localhost:5432/janitor";
+    static String url = "jdbc:postgresql://localhost:5432/janitordb";
     static String user = "janitor";
     static String password = "janitor";
 
@@ -21,7 +24,22 @@ public class StatService {
         return label + ": " + newValue + " (" + difference + " / " + df.format(percentDifference) + " %)";
     }
 
+    private void clearStatistics() {
+        single = 0;
+        franch = 0;
+        daught = 0;
+        evotor = 0;
+        total = 0;
+        daught2 = 0;
+        single2 = 0;
+        franch2 = 0;
+        evotor2 = 0;
+        total2 = 0;
+    }
+
     public String collectionStatistics() {
+        clearStatistics();
+
         try (Connection conn = DriverManager.getConnection(url, user, password)) {
             PreparedStatement ps1 = conn.prepareStatement("select key, value from sys_extras where value != 'customers'");
             ResultSet rs1 = ps1.executeQuery();
@@ -42,7 +60,7 @@ public class StatService {
 
             total = franch + daught + single + evotor;
 
-            PreparedStatement ps2 = conn.prepareStatement("select count(*), p.name from customer c left join profile p on c.profile_id=p.id where c.name not like '%test%' group by p.name");
+            PreparedStatement ps2 = conn.prepareStatement("select count(*), p.name from customer c left join profile p on c.profile_id=p.id where c.name not like '%test%' and c.state = 'BOUND' group by p.name");
             ResultSet rs2 = ps2.executeQuery();
 
             while (rs2.next()) {

@@ -1,6 +1,10 @@
 package ru.quickresto.qrstatsbot;
 
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
+import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -14,11 +18,29 @@ import java.util.ArrayList;
 import java.util.List;
 
 
+@Service
 public class TelegramMessage implements LongPollingSingleThreadUpdateConsumer {
-    static String botToken = "6563408491:AAGRIvjmdIL_jqJ7QyEroCGeJQlJiFIo9eE";
+    static String botToken = "7065012488:AAFAqTvmNjBZo4WuyCUH877UXRJweweGaFg";
     private final TelegramClient telegramClient = new OkHttpTelegramClient(botToken);
-    private final StatService statService = new StatService();
+
+
+    @Autowired
+    private StatService statService;
+
+
+    @PostConstruct
+    public void postConstruct() {
+        TelegramBotsLongPollingApplication botsApplication = new TelegramBotsLongPollingApplication();
+        try {
+            botsApplication.registerBot(botToken, this);
+        } catch (TelegramApiException e) {
+            throw new RuntimeException(e);
+        }
+    }
     public void consume(Update update) {
+
+        System.out.println("New telegram message: " + update.getMessage());
+
         if (update.hasMessage() && update.getMessage().hasText()) {
             String chatId = update.getMessage().getChatId().toString();
             String receivedText = update.getMessage().getText();
