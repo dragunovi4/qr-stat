@@ -8,8 +8,9 @@ import java.time.LocalDate;
 
 @Service
 public class StatService {
-    private int single, franch, daught, evotor, total = 0;
+    private int single, franch, daught, evotor, total, trial = 0;
     private int daught2, single2, franch2, evotor2, total2 = 0;
+    private int daught3, single3, franch3, evotor3, total3 = 0;
     private String resultFr, resultDr, resultSin, resultEvo, resultTotal;
     private String intro = "Текущая статистика по облакам: ";
 
@@ -26,6 +27,7 @@ public class StatService {
 
     private void clearStatistics() {
         single = 0;
+        trial = 0;
         franch = 0;
         daught = 0;
         evotor = 0;
@@ -35,6 +37,11 @@ public class StatService {
         franch2 = 0;
         evotor2 = 0;
         total2 = 0;
+        franch3 = 0;
+        daught3 = 0;
+        single3 = 0;
+        evotor3 = 0;
+        total3 = 0;
     }
 
     public String collectionStatistics() {
@@ -53,7 +60,9 @@ public class StatService {
                     single = value;
                 } else if (key.contains("franch")) {
                     franch = value;
-                } else {
+                } else if (key.contains("trial")) {
+                    trial = value;
+                }else {
                     evotor = value;
                 }
             }
@@ -87,6 +96,28 @@ public class StatService {
             resultEvo = differenceCalculation("Эвоторов", evotor, evotor2 );
             resultTotal = differenceCalculation("Всего", total, total2 );
 
+            PreparedStatement ps3 = conn.prepareStatement("select count(*), p.name, ex.value from customer c left join extras ex on ex.owner_id=c.id left join profile p on c.profile_id=p.id where c.name not like '%test%' and c.state = 'BOUND' and ex.key = 'tariff' and ex.value = 'trial' group by p.name, ex.value ;");
+            ResultSet rs3 = ps3.executeQuery();
+
+            while (rs3.next()) {
+                String name = rs3.getString("name");
+                int count = rs3.getInt("count");
+                if (name == null) {
+                    daught3 += count;
+                } else if (name.contains("single")) {
+                    single3 += count;
+                } else if (name.contains("franch")) {
+                    franch3 += count;
+                } else if (name.contains("evotor")) {
+                    evotor3 += count;
+                } else {
+                    System.out.println("Необработанные облака: " + name);
+                }
+            }
+
+
+            total3 = daught3 + single3 + franch3 + evotor3;
+
             System.out.println(resultFr + "\n" + resultDr + "\n" + resultSin + "\n" + resultEvo + "\n" + resultTotal);
         } catch (SQLException e) {
             throw new RuntimeException(e);
@@ -114,6 +145,7 @@ public class StatService {
             updateFieldValue(preparedStatement, "single", single2);
             updateFieldValue(preparedStatement, "franch", franch2);
             updateFieldValue(preparedStatement, "evotor", evotor2);
+            updateFieldValue(preparedStatement, "trial", total3);
 
             System.out.println("База данных успешно обновлена.");
         } catch (SQLException e) {
@@ -130,9 +162,10 @@ public class StatService {
     private String getAdditionalInfo() {
         return intro + "\n" +
                 resultFr + "\n" +
-                resultDr + "\n" +
-                resultSin + "\n" +
-                resultEvo + "\n" +
-                resultTotal;
+                resultDr + "Из них " + daught3 + " триалов." + "\n" +
+                resultSin + "Из них " + single3 + " триалов." + "\n" +
+                resultEvo + "Из них " + evotor3 + " триалов." + "\n" +
+                resultTotal + "\n" +
+        "Всего триальных облаков: " + total3;
     }
 }
