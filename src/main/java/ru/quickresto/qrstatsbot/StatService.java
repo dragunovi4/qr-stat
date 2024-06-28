@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import java.sql.*;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
+import java.util.Calendar;
 
 @Service
 public class StatService {
@@ -12,7 +13,7 @@ public class StatService {
     private int daught2, single2, franch2, evotor2, total2 = 0;
     private int daught3, single3, franch3, evotor3, total3 = 0;
     private String resultFr, resultDr, resultSin, resultEvo, resultTotal;
-    private String intro = "Текущая статистика по облакам: ";
+    private String intro = "Текущая статистика по облакам";
 
     static String url = "jdbc:postgresql://localhost:5432/janitordb";
     static String user = "janitor";
@@ -48,12 +49,11 @@ public class StatService {
         clearStatistics();
 
         try (Connection conn = DriverManager.getConnection(url, user, password)) {
-            PreparedStatement ps1 = conn.prepareStatement("select key, value from sys_extras where value != 'customers'");
-            ResultSet rs1 = ps1.executeQuery();
+            for (ResultSet rs = executeSql(conn, "select key, value from sys_extras where value != 'customers'"); rs.next(); ) {
+                String key = rs.getString("key");
+                int value = Integer.parseInt(rs.getString("value"));
 
-            while (rs1.next()) {
-                String key = rs1.getString("key");
-                int value = Integer.parseInt(rs1.getString("value"));
+
                 if (key.contains("daught")) {
                     daught = value;
                 } else if (key.contains("single")) {
@@ -69,12 +69,10 @@ public class StatService {
 
             total = franch + daught + single + evotor;
 
-            PreparedStatement ps2 = conn.prepareStatement("select count(*), p.name from customer c left join profile p on c.profile_id=p.id where c.name not like '%test%' and c.state = 'BOUND' group by p.name");
-            ResultSet rs2 = ps2.executeQuery();
+            for (ResultSet rs = executeSql(conn, "select count(*), p.name from customer c left join profile p on c.profile_id=p.id where c.name not like '%test%' and c.state = 'BOUND' group by p.name"); rs.next(); ) {
+                String name = rs.getString("name");
+                int count = Integer.parseInt(rs.getString("count"));
 
-            while (rs2.next()) {
-                String name = rs2.getString("name");
-                int count = rs2.getInt("count");
                 if (name == null) {
                     daught2 += count;
                 } else if (name.contains("single")) {
@@ -96,12 +94,10 @@ public class StatService {
             resultEvo = differenceCalculation("Эвоторов", evotor, evotor2 );
             resultTotal = differenceCalculation("Всего", total, total2 );
 
-            PreparedStatement ps3 = conn.prepareStatement("select count(*), p.name, ex.value from customer c left join extras ex on ex.owner_id=c.id left join profile p on c.profile_id=p.id where c.name not like '%test%' and c.state = 'BOUND' and ex.key = 'tariff' and ex.value = 'trial' group by p.name, ex.value ;");
-            ResultSet rs3 = ps3.executeQuery();
+            for (ResultSet rs = executeSql(conn, "select count(*), p.name, ex.value from customer c left join extras ex on ex.owner_id=c.id left join profile p on c.profile_id=p.id where c.name not like '%test%' and c.state = 'BOUND' and ex.key = 'tariff' and ex.value = 'trial' group by p.name, ex.value ;"); rs.next(); ) {
+                String name = rs.getString("name");
+                int count = rs.getInt("count");
 
-            while (rs3.next()) {
-                String name = rs3.getString("name");
-                int count = rs3.getInt("count");
                 if (name == null) {
                     daught3 += count;
                 } else if (name.contains("single")) {
@@ -128,6 +124,11 @@ public class StatService {
         }
 
         return getAdditionalInfo();
+    }
+
+    private ResultSet executeSql(Connection conn, String sql) throws SQLException {
+        return conn.prepareStatement(sql)
+            .executeQuery();
     }
 
     private boolean isFirstDayOfMonth() {
@@ -160,12 +161,20 @@ public class StatService {
     }
 
     private String getAdditionalInfo() {
-        return intro + "\n" +
+        return intro + (" (относительно " + getLastMonthLastDay() + ")") + "\n" +
                 resultFr + "\n" +
                 resultDr + "Из них " + daught3 + " триалов." + "\n" +
                 resultSin + "Из них " + single3 + " триалов." + "\n" +
                 resultEvo + "Из них " + evotor3 + " триалов." + "\n" +
                 resultTotal + "\n" +
         "Всего триальных облаков: " + total3;
+    }
+
+    private String getLastMonthLastDay() {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.MONTH, -1);
+        cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH));
+
+        return cal.get(Calendar.DAY_OF_MONTH) + "/" + (cal.get(Calendar.MONTH)+1) + "/" + cal.get(Calendar.YEAR);
     }
 }
