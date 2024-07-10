@@ -1,7 +1,11 @@
 package ru.quickresto.qrstatsbot;
 
 import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.TelegramBotsLongPollingApplication;
@@ -20,29 +24,44 @@ import java.util.List;
 
 @Service
 public class TelegramMessage implements LongPollingSingleThreadUpdateConsumer {
-    static String botToken = "7065012488:AAFAqTvmNjBZo4WuyCUH877UXRJweweGaFg";
-    private final TelegramClient telegramClient = new OkHttpTelegramClient(botToken);
 
+    public static final Logger log = LoggerFactory.getLogger(TelegramMessage.class);
 
-    @Autowired
-    private StatService statService;
+    @Value("${telegram.bot.token}")
+    private String botToken;
 
+    @Value("${telegram.bot.group}")
+    private String groupId;
+
+    private final StatService statService;
+
+    private TelegramClient telegramClient;
+
+    public TelegramMessage(StatService statService) {
+        this.statService = statService;
+    }
 
     @PostConstruct
     public void postConstruct() {
+        telegramClient = new OkHttpTelegramClient(botToken);
+
         TelegramBotsLongPollingApplication botsApplication = new TelegramBotsLongPollingApplication();
         try {
             botsApplication.registerBot(botToken, this);
         } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+            log.error("Error constructing telegram message service", e);
         }
     }
-    public void consume(Update update) {
 
+    @Scheduled(cron = "0 20 8 * * *")  // 8 часов на сервере = 13 нашим часам
+    public void sendMessageAtSpecifiedTime() {
+        sendMessageToGroup();
+    }
+
+    public void consume(Update update) {
         System.out.println("New telegram message: " + update.getMessage());
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String chatIdGroup = "-1002201257139";
             String chatIdBot = update.getMessage().getChatId().toString();
             String receivedText = update.getMessage().getText();
 
@@ -50,21 +69,32 @@ public class TelegramMessage implements LongPollingSingleThreadUpdateConsumer {
                 SendMessage messageGroup = null;
                 SendMessage messageBot = null;
                 if (receivedText.equals("/start")) {
-                    messageGroup = new SendMessage(chatIdGroup, "Выберите действие:");
+                    messageGroup = new SendMessage(groupId, "Выберите действие:");
                     messageBot = new SendMessage(chatIdBot, "Выберите действие:");
                     messageGroup.setReplyMarkup(createKeyboard());
                     messageBot.setReplyMarkup(createKeyboard());
                 } else if (receivedText.equals("Статистика")) {
-                    messageGroup = new SendMessage(chatIdGroup, statService.collectionStatistics());
+                    messageGroup = new SendMessage(groupId, statService.collectionStatistics());
                     messageBot = new SendMessage(chatIdBot, statService.collectionStatistics());
                 }
                 telegramClient.execute(messageGroup);
                 telegramClient.execute(messageBot);
             } catch (TelegramApiException e) {
-                e.printStackTrace();
+                log.error("Error processing message", e);
             }
         }
     }
+
+    public void sendMessageToGroup() {
+        try {
+            SendMessage message = new SendMessage(groupId, statService.collectionStatistics());
+            telegramClient.execute(message);
+        } catch (TelegramApiException e) {
+            log.error("Error sending message to group", e);
+        }
+    }
+
+
     private ReplyKeyboardMarkup createKeyboard() {
         ReplyKeyboardMarkup keyboardMarkup = ReplyKeyboardMarkup.builder()
                 .selective(true)

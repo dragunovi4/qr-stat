@@ -1,5 +1,6 @@
 package ru.quickresto.qrstatsbot;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.sql.*;
@@ -9,15 +10,22 @@ import java.util.Calendar;
 
 @Service
 public class StatService {
+
+    @Value("${database.url}")
+    private String url;
+
+    @Value("${database.user}")
+    private String user;
+
+    @Value("${database.password}")
+    private String password;
+
+
     private int single, franch, daught, evotor, total, trial = 0;
     private int daught2, single2, franch2, evotor2, total2 = 0;
     private int daught3, single3, franch3, evotor3, total3 = 0;
     private String resultFr, resultDr, resultSin, resultEvo, resultTotal;
     private String intro = "Текущая статистика по облакам";
-
-    static String url = "jdbc:postgresql://localhost:5432/janitordb";
-    static String user = "janitor";
-    static String password = "janitor";
 
     private static String differenceCalculation(String label, int oldValue, int newValue) {
         int difference = newValue - oldValue;
