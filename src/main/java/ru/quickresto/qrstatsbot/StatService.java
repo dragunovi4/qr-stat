@@ -49,7 +49,7 @@ public class StatService {
         clearStatistics();
 
         try (Connection conn = DriverManager.getConnection(url, user, password)) {
-            for (ResultSet rs = executeSql(conn, "select key, value from sys_extras where value != 'customers'"); rs.next(); ) {
+            for (ResultSet rs = executeSql(conn, "SELECT key, value FROM sys_extras WHERE key IN ('trial', 'single', 'evotor', 'franch', 'daught');"); rs.next(); ) {
                 String key = rs.getString("key");
                 int value = Integer.parseInt(rs.getString("value"));
 
@@ -86,13 +86,7 @@ public class StatService {
                 }
             }
 
-            total2 = franch2 + daught2 + single2 + evotor2;
-
-            resultFr = differenceCalculation("Франшиз (родители)", franch, franch2 );
-            resultDr = differenceCalculation("Франшиз (дочки)", daught, daught2 );
-            resultSin = differenceCalculation("Синглов", single, single2 );
-            resultEvo = differenceCalculation("Эвоторов", evotor, evotor2 );
-            resultTotal = differenceCalculation("Всего", total, total2 );
+            total2 = franch2 + daught2 + single2 + evotor2 - total3;
 
             for (ResultSet rs = executeSql(conn, "select count(*), p.name, ex.value from customer c left join extras ex on ex.owner_id=c.id left join profile p on c.profile_id=p.id where c.name not like '%test%' and c.state = 'BOUND' and ex.key = 'tariff' and ex.value = 'trial' group by p.name, ex.value ;"); rs.next(); ) {
                 String name = rs.getString("name");
@@ -113,6 +107,12 @@ public class StatService {
 
 
             total3 = daught3 + single3 + franch3 + evotor3;
+
+            resultFr = differenceCalculation("Франшиз (родители)", franch, (franch2 - franch3));
+            resultDr = differenceCalculation("Франшиз (дочки)", daught, (daught2 - daught3));
+            resultSin = differenceCalculation("Синглов", single, (single2 - single3));
+            resultEvo = differenceCalculation("Эвоторов", evotor, (evotor2 - evotor3));
+            resultTotal = differenceCalculation("Всего", total, (total2 - total3));
 
             System.out.println(resultFr + "\n" + resultDr + "\n" + resultSin + "\n" + resultEvo + "\n" + resultTotal);
         } catch (SQLException e) {
@@ -163,9 +163,9 @@ public class StatService {
     private String getAdditionalInfo() {
         return intro + (" (относительно " + getLastMonthLastDay() + ")") + "\n" +
                 resultFr + "\n" +
-                resultDr + "Из них " + daught3 + " триалов." + "\n" +
-                resultSin + "Из них " + single3 + " триалов." + "\n" +
-                resultEvo + "Из них " + evotor3 + " триалов." + "\n" +
+                resultDr + "\n" +
+                resultSin + "\n" +
+                resultEvo + "\n" +
                 resultTotal + "\n" +
         "Всего триальных облаков: " + total3;
     }

@@ -42,18 +42,24 @@ public class TelegramMessage implements LongPollingSingleThreadUpdateConsumer {
         System.out.println("New telegram message: " + update.getMessage());
 
         if (update.hasMessage() && update.getMessage().hasText()) {
-            String chatId = update.getMessage().getChatId().toString();
+            String chatIdGroup = "-1002201257139";
+            String chatIdBot = update.getMessage().getChatId().toString();
             String receivedText = update.getMessage().getText();
 
             try {
-                SendMessage message = null;
+                SendMessage messageGroup = null;
+                SendMessage messageBot = null;
                 if (receivedText.equals("/start")) {
-                    message = new SendMessage(chatId, "Выберите действие:");
-                    message.setReplyMarkup(createKeyboard());
+                    messageGroup = new SendMessage(chatIdGroup, "Выберите действие:");
+                    messageBot = new SendMessage(chatIdBot, "Выберите действие:");
+                    messageGroup.setReplyMarkup(createKeyboard());
+                    messageBot.setReplyMarkup(createKeyboard());
                 } else if (receivedText.equals("Статистика")) {
-                    message = new SendMessage(chatId, statService.collectionStatistics());
+                    messageGroup = new SendMessage(chatIdGroup, statService.collectionStatistics());
+                    messageBot = new SendMessage(chatIdBot, statService.collectionStatistics());
                 }
-                telegramClient.execute(message);
+                telegramClient.execute(messageGroup);
+                telegramClient.execute(messageBot);
             } catch (TelegramApiException e) {
                 e.printStackTrace();
             }
