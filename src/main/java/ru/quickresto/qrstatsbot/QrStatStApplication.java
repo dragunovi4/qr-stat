@@ -8,7 +8,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class QrStatStApplication {
 
-
 	public static void main(String[] args) {
 		SpringApplication.run(QrStatStApplication.class, args);
 	}

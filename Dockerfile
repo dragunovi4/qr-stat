@@ -8,7 +8,6 @@ COPY src src
 RUN --mount=type=cache,target=/root/.m2 ./mvnw package -DskipTests
 
 FROM ubuntu:22.04
-#openjdk:17-oracle
 
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive \
