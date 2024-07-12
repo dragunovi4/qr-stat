@@ -1,5 +1,6 @@
 package ru.quickresto.qrstatsbot;
 
+import freemarker.template.TemplateException;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -79,7 +81,7 @@ public class TelegramMessage implements LongPollingSingleThreadUpdateConsumer {
                 }
                 telegramClient.execute(messageGroup);
                 telegramClient.execute(messageBot);
-            } catch (TelegramApiException e) {
+            } catch (TelegramApiException | IOException | TemplateException e) {
                 log.error("Error processing message", e);
             }
         }
@@ -91,6 +93,8 @@ public class TelegramMessage implements LongPollingSingleThreadUpdateConsumer {
             telegramClient.execute(message);
         } catch (TelegramApiException e) {
             log.error("Error sending message to group", e);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
     }
 
